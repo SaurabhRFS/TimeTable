@@ -17,23 +17,26 @@ public class Subject {
     private Long id;
 
     @Column(nullable = false)
-    private String name; // e.g., "Data Warehousing & Mining"
+    private String name;
+
+    // 1. FIX for "Bad Request": Ensure 'code' field exists
+    @Column(nullable = false, unique = true)
+    private String code;
 
     @Column(nullable = false)
-    private String alias; // e.g., "DWM" (For the timetable grid)
+    private String alias;
 
     @Column(nullable = false)
-    private String department; // e.g., "CT"
+    private String department;
 
     @Column(nullable = false)
-    private int semester; // e.g., 6
+    private int semester;
 
-    // The Constraints for the Algorithm
-    private int weeklyLectureCount; // e.g., 3 (Theory hours)
-    
-    private int weeklyLabCount; // e.g., 1 (Number of lab SESSIONS, not hours)
-    
-    private int labDuration; // e.g., 2 (Hours per session)
+    private int weeklyLectureCount;
+    private int weeklyLabCount;
+    private int labDuration;
 
-    private boolean isElective; // True for subjects like "STQA" or "Embedded Systems"
+    // 2. FIX for "JSON parse error": Change 'boolean' to 'Boolean'
+    // This allows the Backend to accept 'null' from the frontend without crashing
+    private Boolean isElective = false; 
 }
