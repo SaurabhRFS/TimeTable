@@ -10,7 +10,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
             background: "#f8f9fa"
         }}>
             {/* Logo / Title */}
-            <h2 style={{ margin: 0 }}>KITS Smart Scheduler</h2>
+            <h2 style={{ margin: 0 }}>CLASS ROOM Scheduler</h2>
             
             {/* Navigation Buttons */}
             <div style={{ display: "flex", gap: "10px" }}>
