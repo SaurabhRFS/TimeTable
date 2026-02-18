@@ -1,33 +1,30 @@
 package com.kits.timetable.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import jakarta.persistence.*; // JPA annotations
+import lombok.Data; // Generates getters/setters automatically
+import lombok.NoArgsConstructor; // Generates default constructor
+import lombok.AllArgsConstructor; // Generates all-args constructor
 
-@Entity
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Table(name = "rooms")
+@Entity // Marks this class as a database table
+@Data // Auto generates getters, setters, toString, etc.
+@NoArgsConstructor // Required by JPA (empty constructor)
+@AllArgsConstructor // Constructor with all fields
+@Table(name = "rooms") // Table name will be "rooms"
 public class Room {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id // Primary key
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment ID
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String roomNumber; // e.g., "267", "206"
+    @Column(nullable = false, unique = true) // Cannot be null & must be unique
+    private String roomNumber; // Example: "267"
 
-    @Column(nullable = false)
-    private int capacity; // e.g., 60
+    @Column(nullable = false) // Cannot be null
+    private int capacity; // Example: 60
 
-    // CRITICAL: This is how we distinguish "Theory" vs "Practical" spaces.
-    // We will store values like "CLASSROOM" or "LAB" here.
-    @Column(nullable = false)
-    private String type; 
+    @Column(nullable = false) // Cannot be null
+    private String type; // "CLASSROOM" or "LAB"
 
-    // This ensures we only book CT rooms for CT subjects.
-    @Column(nullable = false)
-    private String department; 
+    @Column(nullable = false) // Cannot be null
+    private String department; // Example: "CT"
 }

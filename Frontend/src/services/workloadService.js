@@ -18,3 +18,11 @@ export const assignTeacher = async (assignmentData) => {
     if (!response.ok) throw new Error("Failed to save assignment");
     return response.json();
 };
+
+// 3. Unassign a Teacher (Delete Workload)
+export const unassignTeacher = async (subjectId, section, batch) => {
+    const response = await fetch(`${API_URL}?subjectId=${subjectId}&section=${section}&batch=${batch}`, {
+        method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to unassign teacher");
+};

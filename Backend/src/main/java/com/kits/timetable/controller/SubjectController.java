@@ -9,30 +9,48 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/subjects")
-// @CrossOrigin(origins = "http://localhost:5173")
 public class SubjectController {
 
     @Autowired
     private SubjectRepository subjectRepository;
 
-    // 1. Get All (For debug)
     @GetMapping
     public List<Subject> getAllSubjects() {
         return subjectRepository.findAll();
     }
 
-    // 2. Get specific semester subjects (The one we will actually use)
-    // URL Example: /api/subjects/filter?dept=CT&sem=6
     @GetMapping("/filter")
-    public List<Subject> getSubjectsBySem(
-            @RequestParam String dept, 
-            @RequestParam int sem) {
+    public List<Subject> getSubjectsBySem(@RequestParam String dept, @RequestParam int sem) {
         return subjectRepository.findByDepartmentAndSemester(dept, sem);
     }
 
-    // 3. Add a Subject
     @PostMapping
     public Subject createSubject(@RequestBody Subject subject) {
         return subjectRepository.save(subject);
+    }
+
+    // --- FULL EDIT FEATURE ---
+    @PutMapping("/{id}")
+    public Subject updateSubject(@PathVariable Long id, @RequestBody Subject updatedData) {
+        return subjectRepository.findById(id).map(subject -> {
+            subject.setName(updatedData.getName());
+            subject.setCode(updatedData.getCode());
+            subject.setAlias(updatedData.getAlias());
+            subject.setWeeklyLectureCount(updatedData.getWeeklyLectureCount());
+            subject.setWeeklyLabCount(updatedData.getWeeklyLabCount());
+            subject.setLabDuration(updatedData.getLabDuration());
+            
+            // Save custom batch settings
+            subject.setHasBatches(updatedData.getHasBatches());
+            subject.setBatchesPerSection(updatedData.getBatchesPerSection());
+            
+            return subjectRepository.save(subject);
+        }).orElseThrow(() -> new RuntimeException("Subject not found"));
+    }
+
+    // --- FULL DELETE FEATURE ---
+    @DeleteMapping("/{id}")
+    public void deleteSubject(@PathVariable Long id) {
+        subjectRepository.deleteById(id);
     }
 }

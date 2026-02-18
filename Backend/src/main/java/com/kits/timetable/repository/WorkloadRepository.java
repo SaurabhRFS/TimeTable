@@ -7,10 +7,8 @@ import java.util.List;
 
 @Repository
 public interface WorkloadRepository extends JpaRepository<Workload, Long> {
-    
-    // "Give me the config for CT Sem 6"
     List<Workload> findByDepartmentAndSemester(String department, int semester);
     
-    // "Who teaches DWM to Section A?" (Used by Algorithm later)
-    Workload findBySubjectIdAndSection(Long subjectId, String section);
+    // UPDATED: Now checks Subject + Section + Batch
+    Workload findBySubjectIdAndSectionAndBatch(Long subjectId, String section, String batch);
 }

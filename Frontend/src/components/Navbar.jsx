@@ -1,46 +1,32 @@
 const Navbar = ({ activeTab, setActiveTab }) => {
     return (
-        <nav style={{ 
-            borderBottom: "2px solid #ddd", 
-            padding: "15px", 
-            marginBottom: "20px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "#f8f9fa"
-        }}>
-            {/* Logo / Title */}
-            <h2 style={{ margin: 0 }}>CLASS ROOM Scheduler</h2>
+        <nav style={{ borderBottom: "2px solid #ddd", padding: "15px", marginBottom: "20px", display: "flex", justifyContent: "space-between", background: "#f8f9fa" }}>
+            <h2 style={{ margin: 0 }}>Smart Scheduler</h2>
             
-            {/* Navigation Buttons */}
             <div style={{ display: "flex", gap: "10px" }}>
                 <button 
                     onClick={() => setActiveTab("teachers")}
-                    style={{
-                        padding: "10px 20px",
-                        cursor: "pointer",
-                        fontWeight: "bold",
-                        // Simple logic: If active, make it Black. If not, make it White.
-                        backgroundColor: activeTab === "teachers" ? "black" : "white",
-                        color: activeTab === "teachers" ? "white" : "black",
-                        border: "1px solid black"
-                    }}
+                    style={{ padding: "10px", cursor: "pointer", background: activeTab === "teachers" ? "black" : "white", color: activeTab === "teachers" ? "white" : "black" }}
                 >
-                    Manage Teachers
+                    Teachers
                 </button>
-                
                 <button 
                     onClick={() => setActiveTab("workload")}
-                    style={{
-                        padding: "10px 20px",
-                        cursor: "pointer",
-                        fontWeight: "bold",
-                        backgroundColor: activeTab === "workload" ? "black" : "white",
-                        color: activeTab === "workload" ? "white" : "black",
-                        border: "1px solid black"
-                    }}
+                    style={{ padding: "10px", cursor: "pointer", background: activeTab === "workload" ? "black" : "white", color: activeTab === "workload" ? "white" : "black" }}
                 >
-                    Workload Allocation
+                    Workload
+                </button>
+                <button 
+                    onClick={() => setActiveTab("generate")}
+                    style={{ padding: "10px", cursor: "pointer", background: activeTab === "generate" ? "black" : "white", color: activeTab === "generate" ? "white" : "black" }}
+                >
+                    Generator Engine
+                </button>
+                <button 
+                    onClick={() => setActiveTab("view")}
+                    style={{ padding: "10px", cursor: "pointer", background: activeTab === "view" ? "black" : "white", color: activeTab === "view" ? "white" : "black" }}
+                >
+                    View Timetable
                 </button>
             </div>
         </nav>

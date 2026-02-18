@@ -18,3 +18,22 @@ export const addSubject = async (subjectData) => {
     if (!response.ok) throw new Error("Failed to add subject");
     return response.json();
 };
+
+// 3. UPDATE Subject
+export const updateSubject = async (id, subjectData) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subjectData),
+    });
+    if (!response.ok) throw new Error("Failed to update subject");
+    return response.json();
+};
+
+// 4. DELETE Subject
+export const deleteSubject = async (id) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete subject");
+};

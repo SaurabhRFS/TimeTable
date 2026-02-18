@@ -2,22 +2,21 @@ import { useState } from "react";
 import Navbar from "./components/Navbar";
 import TeacherDashboard from "./components/TeacherDashboard";
 import WorkloadDashboard from "./components/WorkloadDashboard";
+import GeneratorDashboard from "./components/GeneratorDashboard";
+import TimetableView from "./components/TimetableView"; // <-- Add this
 
 function App() {
-  // State: Tracks which screen is currently visible
-  const [activeTab, setActiveTab] = useState("teachers");
+  const [activeTab, setActiveTab] = useState("view"); 
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif" }}>
-      
-      {/* 1. The Navigation Module */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
-      {/* 2. The Main Content Module */}
       <main style={{ padding: "20px" }}>
-        {activeTab === "teachers" ? <TeacherDashboard /> : <WorkloadDashboard />}
+        {activeTab === "teachers" && <TeacherDashboard />}
+        {activeTab === "workload" && <WorkloadDashboard />}
+        {activeTab === "generate" && <GeneratorDashboard />}
+        {activeTab === "view" && <TimetableView />} {/* <-- Add this */}
       </main>
-
     </div>
   );
 }

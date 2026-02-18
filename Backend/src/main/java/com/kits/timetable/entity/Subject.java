@@ -19,7 +19,6 @@ public class Subject {
     @Column(nullable = false)
     private String name;
 
-    // 1. FIX for "Bad Request": Ensure 'code' field exists
     @Column(nullable = false, unique = true)
     private String code;
 
@@ -35,8 +34,9 @@ public class Subject {
     private int weeklyLectureCount;
     private int weeklyLabCount;
     private int labDuration;
+    private Boolean isElective = false;
 
-    // 2. FIX for "JSON parse error": Change 'boolean' to 'Boolean'
-    // This allows the Backend to accept 'null' from the frontend without crashing
-    private Boolean isElective = false; 
+    // --- NEW: THE CUSTOM BATCH SYSTEM ---
+    private Boolean hasBatches = false; // "Does this subject split students into batches?"
+    private int batchesPerSection = 0; // "If yes, how many batches? (e.g., 3 means A1, A2, A3)"
 }

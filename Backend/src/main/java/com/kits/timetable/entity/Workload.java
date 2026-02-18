@@ -17,17 +17,18 @@ public class Workload {
     private Long id;
 
     @Column(nullable = false)
-    private String department; // "CT"
+    private String department; 
 
     @Column(nullable = false)
-    private int semester; // 6
+    private int semester; 
 
     @Column(nullable = false)
-    private String section; // "A", "B", "C"
+    private String section; // "A" or "B"
 
-    // RELATIONS
-    // We use CascadeType.MERGE to tell Hibernate: 
-    // "If this Subject already exists (it does), just link to it."
+    // --- NEW FIELD ---
+    @Column(nullable = false)
+    private String batch; // "ALL" (for Theory), "A1", "A2" (for Labs)
+
     @ManyToOne
     @JoinColumn(name = "subject_id", nullable = false)
     private Subject subject;
