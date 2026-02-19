@@ -23,4 +23,21 @@ public class TeacherController {
     public Teacher addTeacher(@RequestBody Teacher teacher) {
         return teacherRepository.save(teacher);
     }
+
+    // --- ADD THIS: EDIT FEATURE ---
+    @PutMapping("/{id}")
+    public Teacher updateTeacher(@PathVariable Long id, @RequestBody Teacher updatedData) {
+        return teacherRepository.findById(id).map(teacher -> {
+            teacher.setName(updatedData.getName());
+            teacher.setDepartment(updatedData.getDepartment());
+            teacher.setAlias(updatedData.getAlias());
+            return teacherRepository.save(teacher);
+        }).orElseThrow(() -> new RuntimeException("Teacher not found"));
+    }
+
+    // --- ADD THIS: DELETE FEATURE ---
+    @DeleteMapping("/{id}")
+    public void deleteTeacher(@PathVariable Long id) {
+        teacherRepository.deleteById(id);
+    }
 }
