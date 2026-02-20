@@ -5,7 +5,7 @@ const TeacherDashboard = () => {
     const [teachers, setTeachers] = useState([]);
     const [formData, setFormData] = useState({ name: "", department: "", alias: "" });
     const [editingId, setEditingId] = useState(null);
-    const [statusMsg, setStatusMsg] = useState({ text: "", type: "" }); // Replaces annoying alerts
+    const [statusMsg, setStatusMsg] = useState({ text: "", type: "" });
 
     useEffect(() => {
         loadTeachers();
@@ -22,7 +22,7 @@ const TeacherDashboard = () => {
 
     const showMessage = (text, type) => {
         setStatusMsg({ text, type });
-        setTimeout(() => setStatusMsg({ text: "", type: "" }), 3000); // Auto-hide after 3 seconds
+        setTimeout(() => setStatusMsg({ text: "", type: "" }), 3000);
     };
 
     const handleInputChange = (e) => {
@@ -72,45 +72,61 @@ const TeacherDashboard = () => {
 
     return (
         <div className="p-6 max-w-5xl mx-auto font-sans">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">
-                Manage Teachers
-            </h2>
+            <div className="flex justify-between items-center mb-6 border-b-2 border-slate-800 pb-3">
+                <h2 className="text-2xl font-bold text-slate-800">
+                    Manage Teachers
+                </h2>
+            </div>
 
             {/* Notification Banner */}
             {statusMsg.text && (
-                <div className={`p-3 mb-4 rounded text-white font-semibold transition-all ${statusMsg.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
+                <div className={`p-3 mb-4 rounded text-white font-semibold transition-all shadow-sm ${statusMsg.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`}>
                     {statusMsg.text}
                 </div>
             )}
 
             {/* Form Section */}
-            <div className="bg-white shadow-lg rounded-lg p-6 mb-8 border-t-4 border-blue-600">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">
-                    {editingId ? "Edit Teacher" : "Add New Teacher"}
+            <div className="bg-white shadow-md rounded-lg p-6 mb-8 border border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                    {editingId ? (
+                        <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit Teacher
+                        </>
+                    ) : (
+                        <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            Add New Teacher
+                        </>
+                    )}
                 </h3>
                 <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4">
                     <input 
-                        className="flex-1 border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="flex-1 border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
                         name="name" placeholder="Name (e.g. Mrs. Ghawade)" 
                         value={formData.name} onChange={handleInputChange} required 
                     />
                     <input 
-                        className="flex-1 border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="flex-1 border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
                         name="department" placeholder="Dept (e.g. CT)" 
                         value={formData.department} onChange={handleInputChange} required 
                     />
                     <input 
-                        className="w-full md:w-32 border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full md:w-32 border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
                         name="alias" placeholder="Alias (e.g. KG)" 
                         value={formData.alias} onChange={handleInputChange} required 
                     />
                     
-                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded transition-colors">
+                    <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white font-semibold px-6 py-2.5 rounded transition-colors shadow-sm">
                         {editingId ? "Update" : "Add"}
                     </button>
                     
                     {editingId && (
-                        <button type="button" onClick={cancelEdit} className="bg-gray-400 hover:bg-gray-500 text-white font-semibold px-4 py-2 rounded transition-colors">
+                        <button type="button" onClick={cancelEdit} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded transition-colors">
                             Cancel
                         </button>
                     )}
@@ -118,34 +134,46 @@ const TeacherDashboard = () => {
             </div>
 
             {/* Table Section */}
-            <div className="bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
+            <div className="bg-white shadow-md rounded-lg overflow-hidden border border-slate-200">
                 <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-100 border-b-2 border-gray-300 text-gray-700">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm uppercase tracking-wider">
                         <tr>
-                            <th className="p-4">ID</th>
-                            <th className="p-4">Name</th>
-                            <th className="p-4">Department</th>
-                            <th className="p-4">Alias</th>
-                            <th className="p-4 text-center">Actions</th>
+                            <th className="p-4 font-semibold">ID</th>
+                            <th className="p-4 font-semibold">Name</th>
+                            <th className="p-4 font-semibold">Department</th>
+                            <th className="p-4 font-semibold">Alias</th>
+                            <th className="p-4 font-semibold text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-slate-100">
                         {teachers.map((t) => (
-                            <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="p-4 font-medium text-gray-600">{t.id}</td>
-                                <td className="p-4 text-gray-800">{t.name}</td>
-                                <td className="p-4 text-gray-600">{t.department}</td>
-                                <td className="p-4 text-gray-600 font-bold">{t.alias}</td>
-                                <td className="p-4 flex justify-center gap-2">
+                            <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="p-4 text-slate-500">{t.id}</td>
+                                <td className="p-4 text-slate-800 font-medium">{t.name}</td>
+                                <td className="p-4 text-slate-600">
+                                    <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold border border-slate-200">
+                                        {t.department}
+                                    </span>
+                                </td>
+                                <td className="p-4 text-slate-600 font-bold">{t.alias}</td>
+                                <td className="p-4 flex justify-center gap-3">
                                     <button 
                                         onClick={() => handleEditClick(t)} 
-                                        className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-sm font-semibold transition-colors">
-                                        Edit
+                                        title="Edit Teacher"
+                                        className="p-2 text-blue-600 hover:bg-blue-100 hover:text-blue-800 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
                                     </button>
                                     <button 
                                         onClick={() => handleDeleteClick(t.id)} 
-                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold transition-colors">
-                                        Delete
+                                        title="Delete Teacher"
+                                        className="p-2 text-red-500 hover:bg-red-100 hover:text-red-700 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
                                     </button>
                                 </td>
                             </tr>
@@ -153,7 +181,12 @@ const TeacherDashboard = () => {
                     </tbody>
                 </table>
                 {teachers.length === 0 && (
-                    <div className="p-6 text-center text-gray-500 italic">No teachers found. Add one above.</div>
+                    <div className="p-8 text-center text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <p>No teachers found. Add your first teacher above.</p>
+                    </div>
                 )}
             </div>
         </div>

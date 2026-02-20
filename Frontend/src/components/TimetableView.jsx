@@ -1,175 +1,254 @@
 import { useEffect, useState } from "react";
-import { getTimetable } from "../services/timetableService";
+import { getSubjectsBySem } from "../services/subjectService";
+import { getAllTeachers } from "../services/teacherService";
+import { getTimetable, addManualEntry, deleteEntry } from "../services/timetableService";
 
 const TimetableView = () => {
-    const [schedule, setSchedule] = useState([]);
-    const [section, setSection] = useState("A");
-    const [loading, setLoading] = useState(false);
-
     const DEPT = "CT";
     const SEM = 6;
     const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    
-    // EXACT match with the PDF columns
+
     const SLOTS = [
-        { slotOrder: 1, label: "10:00 - 10:55", isBreak: false },
-        { slotOrder: 2, label: "10:55 - 11:50", isBreak: false },
-        { slotOrder: 3, label: "11:50 - 12:00", isBreak: true, name: "SHORT BREAK" },
-        { slotOrder: 4, label: "12:00 - 12:55", isBreak: false },
-        { slotOrder: 5, label: "1:00 - 2:00", isBreak: false }, 
-        { slotOrder: 6, label: "2:00 - 2:55", isBreak: false },
-        { slotOrder: 7, label: "2:55 - 3:55", isBreak: false },
-        { slotOrder: 8, label: "3:55 - 4:50", isBreak: false }
+        { id: 1, label: "10:00 - 11:00", isBreak: false },
+        { id: 2, label: "11:00 - 12:00", isBreak: false },
+        { id: 3, label: "12:00 - 1:00", isBreak: false },
+        { id: 4, label: "1:00 - 2:00", isBreak: true, name: "LUNCH BREAK" },
+        { id: 5, label: "2:00 - 3:00", isBreak: false },
+        { id: 6, label: "3:00 - 4:00", isBreak: false },
+        { id: 7, label: "4:00 - 5:00", isBreak: false }
     ];
 
+    const [section, setSection] = useState("A");
+    const [schedule, setSchedule] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+    const [teachers, setTeachers] = useState([]);
+    const [statusMsg, setStatusMsg] = useState({ text: "", type: "" });
+    const [loading, setLoading] = useState(false);
+
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [activeCell, setActiveCell] = useState({ day: "", slotId: null, slotLabel: "" });
+    const [formData, setFormData] = useState({ subjectId: "", teacherId: "", batch: "ALL" });
+
     useEffect(() => {
-        loadSchedule();
+        loadData();
     }, [section]);
 
-    const loadSchedule = async () => {
+    const loadData = async () => {
         setLoading(true);
         try {
-            const data = await getTimetable(DEPT, SEM, section);
-            setSchedule(data);
+            const [schedData, subData, teacherData] = await Promise.all([
+                getTimetable(DEPT, SEM, section),
+                getSubjectsBySem(DEPT, SEM),
+                getAllTeachers()
+            ]);
+            setSchedule(schedData);
+            setSubjects(subData);
+            setTeachers(teacherData);
         } catch (error) {
-            console.error("Error loading timetable:", error);
+            showMessage("Error loading timetable data.", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    const getSubjectColor = (subjectAlias) => {
-        const colors = ["#e3f2fd", "#e8f5e9", "#fff3e0", "#f3e5f5", "#ffebee", "#e0f7fa"];
-        let hash = 0;
-        for (let i = 0; i < subjectAlias.length; i++) {
-            hash = subjectAlias.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        return colors[Math.abs(hash) % colors.length];
+    const showMessage = (text, type) => {
+        setStatusMsg({ text, type });
+        setTimeout(() => setStatusMsg({ text: "", type: "" }), 3000);
     };
 
-    const getCellContent = (entries) => {
-        if (entries.length === 0) {
-            return <div style={{ color: "#aaa", padding: "15px", fontStyle: "italic" }}>Free</div>;
-        }
+    // --- MODAL & ACTION HANDLERS ---
+    const openModal = (day, slot) => {
+        setActiveCell({ day, slotId: slot.id, slotLabel: slot.label });
+        setFormData({ subjectId: "", teacherId: "", batch: "ALL" });
+        setIsModalOpen(true);
+    };
 
-        return (
-            <div style={{ 
-                display: entries.length > 1 ? "grid" : "block", 
-                gridTemplateColumns: entries.length > 1 ? "1fr 1fr" : "1fr", 
-                gap: "4px", height: "100%" 
-            }}>
-                {entries.map(entry => {
-                    const bgColor = getSubjectColor(entry.subject.alias);
-                    const isLab = entry.batch !== "ALL";
-                    
-                    return (
-                        <div key={entry.id} style={{ 
-                            backgroundColor: bgColor,
-                            borderLeft: isLab ? "5px solid #6b21a8" : `5px solid #2563eb`,
-                            border: "1px solid #ddd", borderRadius: "6px",
-                            padding: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                            display: "flex", flexDirection: "column", justifyContent: "center"
-                        }}>
-                            <div style={{ fontWeight: "900", color: "#1e293b", fontSize: isLab ? "14px" : "13px" }}>
-                                {entry.subject.alias} {isLab ? `(Batch ${entry.batch})` : ""}
-                            </div>
-                            <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px", fontWeight: "bold" }}>
-                                Room: {entry.room.roomNumber} | {entry.teacher.alias}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        );
+    const closeModal = () => setIsModalOpen(false);
+
+    const handleFormChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const handleSaveEntry = async (e) => {
+        e.preventDefault();
+        const payload = {
+            day: activeCell.day, department: DEPT, semester: SEM, section: section, batch: formData.batch,
+            timeSlot: { id: activeCell.slotId }, subject: { id: parseInt(formData.subjectId) },
+            teacher: { id: parseInt(formData.teacherId) }, room: { id: 1 } 
+        };
+
+        try {
+            await addManualEntry(payload);
+            showMessage("Successfully pinned to timetable!", "success");
+            closeModal();
+            loadData(); 
+        } catch (error) {
+            showMessage("Failed to save entry.", "error");
+        }
+    };
+
+    const handleDelete = async (entryId) => {
+        if (window.confirm("Remove this entry from the timetable?")) {
+            try {
+                await deleteEntry(entryId);
+                showMessage("Entry removed.", "success");
+                loadData();
+            } catch (error) {
+                showMessage("Failed to delete entry.", "error");
+            }
+        }
+    };
+
+    const getSubjectColor = (type) => {
+        switch(type) {
+            case 'THEORY': return 'bg-blue-100 border-blue-400 text-blue-900';
+            case 'LAB': return 'bg-purple-100 border-purple-400 text-purple-900';
+            case 'ACTIVITY': return 'bg-orange-100 border-orange-400 text-orange-900';
+            default: return 'bg-gray-100 border-gray-400 text-gray-900';
+        }
     };
 
     return (
-        <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "3px solid #1e293b", paddingBottom: "10px", marginBottom: "20px" }}>
+        <div className="max-w-[1400px] mx-auto font-sans relative">
+            {/* HEADER CONTROLS */}
+            <div className="flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
                 <div>
-                    <h2 style={{ margin: 0, color: "#1e293b", fontSize: "24px" }}>Department of Computer Technology</h2>
-                    <p style={{ margin: "4px 0 0 0", color: "#64748b", fontWeight: "bold" }}>B.Tech {SEM}th Semester Timetable</p>
+                    <h2 className="text-3xl font-black text-slate-800 m-0 tracking-tight">Interactive Timetable</h2>
+                    <p className="text-slate-500 font-bold mt-1">B.Tech {SEM}th Semester • Dept of {DEPT}</p>
                 </div>
                 
-                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                    <select value={section} onChange={(e) => setSection(e.target.value)} style={{ padding: "8px 12px", borderRadius: "6px", border: "2px solid #cbd5e1", fontWeight: "bold", fontSize: "16px", cursor: "pointer" }}>
+                <div className="flex items-center gap-3">
+                    <select 
+                        value={section} 
+                        onChange={(e) => setSection(e.target.value)} 
+                        className="p-2.5 border-2 border-slate-300 rounded-lg font-bold text-slate-700 outline-none focus:border-emerald-500 cursor-pointer"
+                    >
                         <option value="A">Section A</option>
                         <option value="B">Section B</option>
                     </select>
-                    <button onClick={() => window.print()} style={{ padding: "8px 16px", background: "#1e293b", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}>
-                        Print PDF
+                    <button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-lg shadow-sm transition-colors flex items-center gap-2">
+                        ✨ Auto-Fill Theory
+                    </button>
+                    <button onClick={() => window.print()} className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-lg shadow-sm transition-colors print:hidden">
+                        🖨️ Print PDF
                     </button>
                 </div>
             </div>
 
-            {loading ? <div style={{ textAlign: "center", padding: "50px", color: "#666", fontWeight: "bold", fontSize: "18px" }}>Loading timetable...</div> : (
-                <div style={{ overflowX: "auto", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 4px 10px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "center", tableLayout: "fixed" }}>
-                        <thead>
+            {statusMsg.text && (
+                <div className={`p-3 mb-4 rounded text-white font-semibold shadow-sm transition-all ${statusMsg.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                    {statusMsg.text}
+                </div>
+            )}
+
+            {/* THE MASTER GRID */}
+            <div className="bg-white shadow-xl rounded-xl overflow-x-auto border border-slate-200 print:shadow-none print:border-none">
+                {loading ? (
+                    <div className="p-20 text-center font-bold text-slate-500 animate-pulse">Loading Grid...</div>
+                ) : (
+                    <table className="w-full text-center border-collapse table-fixed min-w-[1000px]">
+                        <thead className="bg-slate-100">
                             <tr>
-                                <th style={{ width: "8%", padding: "15px", background: "#f1f5f9", borderBottom: "2px solid #cbd5e1", borderRight: "2px solid #cbd5e1", color: "#334155" }}>
-                                    Day / Time
-                                </th>
+                                <th className="p-4 w-24 border-b-2 border-r-2 border-slate-300 text-slate-700 font-black">Day</th>
                                 {SLOTS.map(slot => (
-                                    <th key={slot.slotOrder} style={{ width: slot.isBreak ? "4%" : "12.5%", padding: "10px", background: "#f8fafc", borderBottom: "2px solid #cbd5e1", borderRight: "1px solid #e2e8f0", color: "#334155", fontSize: "13px", fontWeight: "800" }}>
+                                    <th key={slot.id} className={`p-4 border-b-2 border-r border-slate-200 text-sm font-bold text-slate-600 ${slot.isBreak ? 'w-12 bg-slate-200 border-slate-300' : ''}`}>
                                         {slot.label}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody>
-                            {DAYS.map((day, dayIndex) => {
-                                let skipNext = 0; // The magic variable that allows labs to span multiple columns
-                                
-                                return (
-                                    <tr key={day} style={{ transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                        <td style={{ padding: "15px", background: "#f1f5f9", borderRight: "2px solid #cbd5e1", borderBottom: "1px solid #e2e8f0", fontSize: "16px", fontWeight: "900", color: "#1e293b" }}>
-                                            {day}
-                                        </td>
-                                        
-                                        {SLOTS.map(slot => {
-                                            if (skipNext > 0) {
-                                                skipNext--;
-                                                return null; // Skip rendering this <td> because the previous Lab is spanning over it
+                        <tbody className="divide-y divide-slate-100">
+                            {DAYS.map((day, dayIndex) => (
+                                <tr key={day} className="hover:bg-slate-50 transition-colors group/row">
+                                    <td className="p-4 font-black text-slate-800 border-r-2 border-slate-300 bg-slate-50 text-lg">
+                                        {day}
+                                    </td>
+                                    
+                                    {SLOTS.map(slot => {
+                                        if (slot.isBreak) {
+                                            if (dayIndex === 0) {
+                                                return (
+                                                    <td key={slot.id} rowSpan={DAYS.length} className="bg-slate-200 border-r border-slate-300 print:bg-gray-100">
+                                                        <div className="writing-vertical-rl transform rotate-180 mx-auto tracking-[0.3em] font-black text-slate-500 text-sm whitespace-nowrap">
+                                                            {slot.name}
+                                                        </div>
+                                                    </td>
+                                                );
                                             }
+                                            return null; 
+                                        }
 
-                                            if (slot.isBreak) {
-                                                if (dayIndex === 0) {
-                                                    return (
-                                                        <td key={slot.slotOrder} rowSpan={DAYS.length} style={{ background: "#e2e8f0", borderRight: "1px solid #cbd5e1", borderBottom: "1px solid #cbd5e1" }}>
-                                                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", letterSpacing: "4px", fontWeight: "900", color: "#475569", fontSize: "14px" }}>
-                                                                {slot.name}
+                                        const entries = schedule.filter(e => e.day === day && e.timeSlot.id === slot.id);
+
+                                        return (
+                                            <td key={`${day}-${slot.id}`} className="p-2 border-r border-slate-200 align-top relative min-h-[100px] print:p-1 print:border-gray-400">
+                                                <div className="flex flex-col gap-1.5 h-full min-h-[80px]">
+                                                    {entries.map(entry => (
+                                                        <div key={entry.id} className={`relative p-2 border-l-4 rounded shadow-sm text-left flex flex-col justify-center group/card print:border-l-2 print:shadow-none ${getSubjectColor(entry.subject.subjectType)}`}>
+                                                            <div className="font-bold text-sm leading-tight print:text-xs">
+                                                                {entry.subject.alias} {entry.batch !== 'ALL' && <span className="text-[10px] bg-white/70 px-1 rounded ml-1 font-black">B: {entry.batch}</span>}
                                                             </div>
-                                                        </td>
-                                                    );
-                                                }
-                                                return null; 
-                                            }
+                                                            <div className="text-xs mt-1 font-bold opacity-75 print:text-[10px]">
+                                                                {entry.teacher.alias}
+                                                            </div>
+                                                            <button onClick={() => handleDelete(entry.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover/card:opacity-100 transition-opacity hover:bg-red-600 print:hidden" title="Remove Entry">✕</button>
+                                                        </div>
+                                                    ))}
 
-                                            // Get all entries for this specific time block
-                                            const entries = schedule.filter(e => e.day === day && e.timeSlot.slotOrder === slot.slotOrder);
-                                            const isLab = entries.length > 0 && entries.some(e => e.batch !== "ALL");
-
-                                            if (isLab) {
-                                                skipNext = 1; // Tell the loop to skip the next column to make room for this 2-hour lab block
-                                                return (
-                                                    <td key={`${day}-${slot.slotOrder}`} colSpan={2} style={{ padding: "6px", borderRight: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", verticalAlign: "middle", backgroundColor: "#fff", height: "85px" }}>
-                                                        {getCellContent(entries)}
-                                                    </td>
-                                                );
-                                            } else {
-                                                return (
-                                                    <td key={`${day}-${slot.slotOrder}`} colSpan={1} style={{ padding: "4px", borderRight: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", verticalAlign: "middle", backgroundColor: "#fff", height: "85px" }}>
-                                                        {getCellContent(entries)}
-                                                    </td>
-                                                );
-                                            }
-                                        })}
-                                    </tr>
-                                );
-                            })}
+                                                    {/* + ADD BUTTON */}
+                                                    <button onClick={() => openModal(day, slot)} className="mt-auto w-full min-h-[32px] border-2 border-dashed border-slate-200 rounded text-slate-400 font-bold hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-600 transition-all flex items-center justify-center text-xs opacity-0 group-hover/row:opacity-100 print:hidden">
+                                                        + Add
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
+                )}
+            </div>
+
+            {/* --- ASSIGNMENT MODAL --- */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 print:hidden">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+                        <div className="bg-slate-800 p-4 flex justify-between items-center">
+                            <h3 className="text-white font-bold text-lg">Pin to {activeCell.day} ({activeCell.slotLabel})</h3>
+                            <button onClick={closeModal} className="text-slate-400 hover:text-white transition-colors text-xl font-bold">✕</button>
+                        </div>
+                        
+                        <form onSubmit={handleSaveEntry} className="p-6 space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Select Subject / Lab</label>
+                                <select name="subjectId" value={formData.subjectId} onChange={handleFormChange} required className="w-full border-2 border-slate-200 p-2.5 rounded-lg focus:border-emerald-500 outline-none font-bold text-slate-700">
+                                    <option value="">-- Choose --</option>
+                                    {subjects.map(sub => <option key={sub.id} value={sub.id}>[{sub.subjectType}] {sub.alias} - {sub.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Select Teacher</label>
+                                <select name="teacherId" value={formData.teacherId} onChange={handleFormChange} required className="w-full border-2 border-slate-200 p-2.5 rounded-lg focus:border-emerald-500 outline-none font-bold text-slate-700">
+                                    <option value="">-- Choose --</option>
+                                    {teachers.map(t => <option key={t.id} value={t.id}>{t.name} ({t.alias})</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Target Audience</label>
+                                <select name="batch" value={formData.batch} onChange={handleFormChange} className="w-full border-2 border-slate-200 p-2.5 rounded-lg focus:border-emerald-500 outline-none font-black text-slate-800 bg-slate-50">
+                                    <option value="ALL">Entire Class</option>
+                                    <option value="A1">Batch A1 (Lab)</option>
+                                    <option value="A2">Batch A2 (Lab)</option>
+                                    <option value="B1">Batch B1 (Lab)</option>
+                                    <option value="B2">Batch B2 (Lab)</option>
+                                </select>
+                            </div>
+                            <div className="pt-4 flex gap-3">
+                                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-colors shadow-sm text-lg">Pin Block</button>
+                                <button type="button" onClick={closeModal} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-lg transition-colors text-lg">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>
@@ -177,465 +256,3 @@ const TimetableView = () => {
 };
 
 export default TimetableView;
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { useEffect, useState } from "react";
-
-// import { getTimetable } from "../services/timetableService";
-
-// const TimetableView = () => {
-//     const [schedule, setSchedule] = useState([]);
-//     const [section, setSection] = useState("A");
-//     const [loading, setLoading] = useState(false);
-
-//     const DEPT = "CT";
-//     const SEM = 6;
-//     const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    
-//     // CHANGED: We now map using slotOrder, not DB ID, so it survives database resets!
-//     const SLOTS = [
-//         { slotOrder: 1, label: "10:00 - 10:55", isBreak: false },
-//         { slotOrder: 2, label: "10:55 - 11:50", isBreak: false },
-//         { slotOrder: 3, label: "11:50 - 12:00", isBreak: true, name: "SHORT BREAK" },
-//         { slotOrder: 4, label: "12:00 - 12:55", isBreak: false },
-//         { slotOrder: 5, label: "12:55 - 01:35", isBreak: true, name: "LUNCH BREAK" },
-//         { slotOrder: 6, label: "01:35 - 02:30", isBreak: false },
-//         { slotOrder: 7, label: "02:30 - 03:25", isBreak: false },
-//         { slotOrder: 8, label: "03:25 - 03:35", isBreak: true, name: "SHORT BREAK" },
-//         { slotOrder: 9, label: "03:35 - 04:30", isBreak: false }
-//     ];
-
-//     useEffect(() => {
-//         loadSchedule();
-//     }, [section]);
-
-//     const loadSchedule = async () => {
-//         setLoading(true);
-//         try {
-//             const data = await getTimetable(DEPT, SEM, section);
-//             setSchedule(data);
-//         } catch (error) {
-//             console.error("Error loading timetable:", error);
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-//     const getSubjectColor = (subjectAlias) => {
-//         const colors = ["#e3f2fd", "#e8f5e9", "#fff3e0", "#f3e5f5", "#ffebee", "#e0f7fa"];
-//         let hash = 0;
-//         for (let i = 0; i < subjectAlias.length; i++) {
-//             hash = subjectAlias.charCodeAt(i) + ((hash << 5) - hash);
-//         }
-//         return colors[Math.abs(hash) % colors.length];
-//     };
-
-//     // UPGRADED: Renders Parallel Labs Side-by-Side just like your PDF
-//     const getCellContent = (day, slotOrder) => {
-//         // Find all entries for this specific day and slotOrder
-//         const entries = schedule.filter(e => e.day === day && e.timeSlot.slotOrder === slotOrder);
-        
-//         if (entries.length === 0) {
-//             return <div style={{ color: "#aaa", padding: "15px", fontStyle: "italic" }}>Free</div>;
-//         }
-
-//         return (
-//             <div style={{ 
-//                 display: entries.length > 1 ? "grid" : "block", 
-//                 gridTemplateColumns: entries.length > 1 ? "1fr 1fr" : "1fr", 
-//                 gap: "4px", 
-//                 height: "100%" 
-//             }}>
-//                 {entries.map(entry => {
-//                     const bgColor = getSubjectColor(entry.subject.alias);
-//                     const isLab = entry.batch !== "ALL";
-                    
-//                     return (
-//                         <div key={entry.id} style={{ 
-//                             backgroundColor: bgColor,
-//                             borderLeft: isLab ? "4px solid #6b21a8" : `4px solid #2563eb`,
-//                             border: "1px solid #ddd",
-//                             borderRadius: "4px",
-//                             padding: "6px",
-//                             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-//                             textAlign: "center",
-//                             display: "flex",
-//                             flexDirection: "column",
-//                             justifyContent: "center"
-//                         }}>
-//                             <div style={{ fontWeight: "900", color: "#222", fontSize: "12px" }}>
-//                                 {entry.subject.alias} {isLab ? `(B: ${entry.batch})` : ""}
-//                             </div>
-//                             <div style={{ fontSize: "10px", color: "#555", marginTop: "2px", fontWeight: "bold" }}>
-//                                 {entry.room.roomNumber} | {entry.teacher.alias}
-//                             </div>
-//                         </div>
-//                     );
-//                 })}
-//             </div>
-//         );
-//     };
-
-//     return (
-//         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-            
-//             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "3px solid #1e293b", paddingBottom: "10px", marginBottom: "20px" }}>
-//                 <div>
-//                     <h2 style={{ margin: 0, color: "#1e293b", fontSize: "24px" }}>Department of Computer Technology</h2>
-//                     <p style={{ margin: "4px 0 0 0", color: "#64748b", fontWeight: "bold" }}>Academic Year 2025-26 | B.Tech {SEM}th Semester</p>
-//                 </div>
-                
-//                 <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-//                     <select 
-//                         value={section} 
-//                         onChange={(e) => setSection(e.target.value)} 
-//                         style={{ padding: "8px 12px", borderRadius: "6px", border: "2px solid #cbd5e1", fontWeight: "bold", fontSize: "16px", cursor: "pointer" }}
-//                     >
-//                         <option value="A">Section A</option>
-//                         <option value="B">Section B</option>
-//                     </select>
-//                     <button 
-//                         onClick={() => window.print()} 
-//                         style={{ padding: "8px 16px", background: "#1e293b", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
-//                     >
-//                         Print PDF
-//                     </button>
-//                 </div>
-//             </div>
-
-//             {loading ? <div style={{ textAlign: "center", padding: "50px", color: "#666", fontWeight: "bold", fontSize: "18px" }}>Loading timetable...</div> : (
-//                 <div style={{ overflowX: "auto", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 4px 10px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" }}>
-//                     <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "center", tableLayout: "fixed" }}>
-//                         <thead>
-//                             <tr>
-//                                 <th style={{ width: "8%", padding: "15px", background: "#f1f5f9", borderBottom: "2px solid #cbd5e1", borderRight: "2px solid #cbd5e1", color: "#334155" }}>
-//                                     Day / Time
-//                                 </th>
-//                                 {SLOTS.map(slot => (
-//                                     <th key={slot.slotOrder} style={{ 
-//                                         width: slot.isBreak ? "4%" : "12.5%", 
-//                                         padding: "10px", 
-//                                         background: "#f8fafc", 
-//                                         borderBottom: "2px solid #cbd5e1", 
-//                                         borderRight: "1px solid #e2e8f0", 
-//                                         color: "#334155",
-//                                         fontSize: "12px",
-//                                         fontWeight: "800"
-//                                     }}>
-//                                         {slot.label}
-//                                     </th>
-//                                 ))}
-//                             </tr>
-//                         </thead>
-//                         <tbody>
-//                             {DAYS.map((day, dayIndex) => (
-//                                 <tr key={day} style={{ transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                    
-//                                     {/* Y-Axis: Days */}
-//                                     <td style={{ 
-//                                         padding: "15px", 
-//                                         background: "#f1f5f9", 
-//                                         borderRight: "2px solid #cbd5e1", 
-//                                         borderBottom: "1px solid #e2e8f0", 
-//                                         fontSize: "16px", 
-//                                         fontWeight: "900", 
-//                                         color: "#1e293b" 
-//                                     }}>
-//                                         {day}
-//                                     </td>
-                                    
-//                                     {/* X-Axis: Time Slots */}
-//                                     {SLOTS.map(slot => {
-//                                         if (slot.isBreak) {
-//                                             if (dayIndex === 0) {
-//                                                 return (
-//                                                     <td key={slot.slotOrder} rowSpan={DAYS.length} style={{ 
-//                                                         background: "#e2e8f0", 
-//                                                         borderRight: "1px solid #cbd5e1", 
-//                                                         borderBottom: "1px solid #cbd5e1",
-//                                                     }}>
-//                                                         <div style={{ 
-//                                                             writingMode: "vertical-rl", 
-//                                                             transform: "rotate(180deg)", 
-//                                                             margin: "0 auto", 
-//                                                             letterSpacing: "4px",
-//                                                             fontWeight: "900",
-//                                                             color: "#475569",
-//                                                             fontSize: "14px"
-//                                                         }}>
-//                                                             {slot.name}
-//                                                         </div>
-//                                                     </td>
-//                                                 );
-//                                             }
-//                                             return null; 
-//                                         } else {
-//                                             return (
-//                                                 <td key={`${day}-${slot.slotOrder}`} style={{ 
-//                                                     padding: "4px", 
-//                                                     borderRight: "1px solid #e2e8f0", 
-//                                                     borderBottom: "1px solid #e2e8f0", 
-//                                                     verticalAlign: "middle", 
-//                                                     backgroundColor: "#fff",
-//                                                     height: "80px"
-//                                                 }}>
-//                                                     {/* Pass slot.slotOrder instead of slot.id */}
-//                                                     {getCellContent(day, slot.slotOrder)}
-//                                                 </td>
-//                                             );
-//                                         }
-//                                     })}
-//                                 </tr>
-//                             ))}
-//                         </tbody>
-//                     </table>
-//                 </div>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default TimetableView;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { useEffect, useState } from "react";
-// import { getTimetable } from "../services/timetableService";
-
-// const TimetableView = () => {
-//     const [schedule, setSchedule] = useState([]);
-//     const [section, setSection] = useState("A");
-//     const [loading, setLoading] = useState(false);
-
-//     const DEPT = "CT";
-//     const SEM = 6;
-//     const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    
-//     const SLOTS = [
-//         { id: 1, label: "10:00 - 10:55", isBreak: false },
-//         { id: 2, label: "10:55 - 11:50", isBreak: false },
-//         { id: 3, label: "11:50 - 12:00", isBreak: true, name: "SHORT BREAK" },
-//         { id: 4, label: "12:00 - 12:55", isBreak: false },
-//         { id: 5, label: "12:55 - 01:35", isBreak: true, name: "LUNCH BREAK" },
-//         { id: 6, label: "01:35 - 02:30", isBreak: false },
-//         { id: 7, label: "02:30 - 03:25", isBreak: false },
-//         { id: 8, label: "03:25 - 03:35", isBreak: true, name: "SHORT BREAK" },
-//         { id: 9, label: "03:35 - 04:30", isBreak: false }
-//     ];
-
-//     useEffect(() => {
-//         loadSchedule();
-//     }, [section]);
-
-//     const loadSchedule = async () => {
-//         setLoading(true);
-//         try {
-//             const data = await getTimetable(DEPT, SEM, section);
-//             setSchedule(data);
-//         } catch (error) {
-//             alert("Error loading timetable data.");
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-//     // Assigns a consistent pastel background color based on the subject's name
-//     const getSubjectColor = (subjectAlias) => {
-//         const colors = ["#e3f2fd", "#e8f5e9", "#fff3e0", "#f3e5f5", "#ffebee", "#e0f7fa"];
-//         let hash = 0;
-//         for (let i = 0; i < subjectAlias.length; i++) {
-//             hash = subjectAlias.charCodeAt(i) + ((hash << 5) - hash);
-//         }
-//         return colors[Math.abs(hash) % colors.length];
-//     };
-
-//     const getCellContent = (day, slotId) => {
-//         const entries = schedule.filter(e => e.day === day && e.timeSlot.id === slotId);
-        
-//         if (entries.length === 0) {
-//             return <div style={{ color: "#ccc", padding: "10px" }}>- Free -</div>;
-//         }
-
-//         return entries.map(entry => {
-//             const bgColor = getSubjectColor(entry.subject.alias);
-//             const isLab = entry.batch !== "ALL";
-            
-//             return (
-//                 <div key={entry.id} style={{ 
-//                     backgroundColor: bgColor,
-//                     borderLeft: isLab ? "4px solid #333" : `4px solid ${bgColor}`,
-//                     border: "1px solid #ddd",
-//                     borderRadius: "4px",
-//                     padding: "6px",
-//                     marginBottom: "4px",
-//                     boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-//                     textAlign: "left"
-//                 }}>
-//                     <div style={{ fontWeight: "bold", color: "#222", fontSize: "13px" }}>
-//                         {entry.subject.alias} {isLab ? `[${entry.batch}]` : ""}
-//                     </div>
-//                     <div style={{ fontSize: "11px", color: "#555", marginTop: "4px" }}>
-//                         {entry.teacher.alias} | Rm: {entry.room.roomNumber}
-//                     </div>
-//                 </div>
-//             );
-//         });
-//     };
-
-//     return (
-//         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "20px" }}>
-            
-//             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #333", paddingBottom: "10px", marginBottom: "20px" }}>
-//                 <h2 style={{ margin: 0, color: "#333" }}>Class Timetable View</h2>
-                
-//                 <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-//                     <span style={{ fontWeight: "bold", color: "#666" }}>{DEPT} - Semester {SEM}</span>
-//                     <select 
-//                         value={section} 
-//                         onChange={(e) => setSection(e.target.value)} 
-//                         style={{ padding: "8px 12px", borderRadius: "4px", border: "1px solid #ccc", fontWeight: "bold" }}
-//                     >
-//                         <option value="A">Section A</option>
-//                         <option value="B">Section B</option>
-//                     </select>
-//                     <button 
-//                         onClick={() => window.print()} 
-//                         style={{ padding: "8px 16px", background: "#333", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
-//                     >
-//                         Print PDF
-//                     </button>
-//                 </div>
-//             </div>
-
-//             {loading ? <div style={{ textAlign: "center", padding: "50px", color: "#666" }}>Loading schedule data...</div> : (
-//                 <div style={{ overflowX: "auto", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
-//                     <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "center", tableLayout: "fixed" }}>
-//                         <thead>
-//                             <tr>
-//                                 <th style={{ width: "8%", padding: "15px", background: "#f8f9fa", borderBottom: "2px solid #333", borderRight: "2px solid #333", color: "#333" }}>
-//                                     Day \ Time
-//                                 </th>
-//                                 {SLOTS.map(slot => (
-//                                     <th key={slot.id} style={{ 
-//                                         width: slot.isBreak ? "4%" : "13%", 
-//                                         padding: "10px", 
-//                                         background: "#f8f9fa", 
-//                                         borderBottom: "2px solid #333", 
-//                                         borderRight: "1px solid #ddd", 
-//                                         color: "#333",
-//                                         fontSize: "13px"
-//                                     }}>
-//                                         {slot.label}
-//                                     </th>
-//                                 ))}
-//                             </tr>
-//                         </thead>
-//                         <tbody>
-//                             {DAYS.map((day, dayIndex) => (
-//                                 <tr key={day}>
-//                                     {/* Y-Axis: Days */}
-//                                     <td style={{ 
-//                                         padding: "15px", 
-//                                         background: "#fcfcfc", 
-//                                         borderRight: "2px solid #333", 
-//                                         borderBottom: "1px solid #ddd", 
-//                                         fontSize: "14px", 
-//                                         fontWeight: "bold", 
-//                                         color: "#333" 
-//                                     }}>
-//                                         {day}
-//                                     </td>
-                                    
-//                                     {/* X-Axis: Time Slots */}
-//                                     {SLOTS.map(slot => {
-//                                         if (slot.isBreak) {
-//                                             // Render the Break column only on the first row, spanning all rows
-//                                             if (dayIndex === 0) {
-//                                                 return (
-//                                                     <td key={slot.id} rowSpan={DAYS.length} style={{ 
-//                                                         background: "#f1f3f5", 
-//                                                         borderRight: "1px solid #ddd", 
-//                                                         borderBottom: "1px solid #ddd",
-//                                                     }}>
-//                                                         <div style={{ 
-//                                                             writingMode: "vertical-rl", 
-//                                                             transform: "rotate(180deg)", 
-//                                                             margin: "0 auto", 
-//                                                             letterSpacing: "3px",
-//                                                             fontWeight: "bold",
-//                                                             color: "#777",
-//                                                             fontSize: "14px"
-//                                                         }}>
-//                                                             {slot.name}
-//                                                         </div>
-//                                                     </td>
-//                                                 );
-//                                             }
-//                                             return null; // Skip rendering for other days because rowSpan covers it
-//                                         } else {
-//                                             return (
-//                                                 <td key={`${day}-${slot.id}`} style={{ 
-//                                                     padding: "6px", 
-//                                                     borderRight: "1px solid #ddd", 
-//                                                     borderBottom: "1px solid #ddd", 
-//                                                     verticalAlign: "top", 
-//                                                     backgroundColor: "#fff" 
-//                                                 }}>
-//                                                     {getCellContent(day, slot.id)}
-//                                                 </td>
-//                                             );
-//                                         }
-//                                     })}
-//                                 </tr>
-//                             ))}
-//                         </tbody>
-//                     </table>
-//                 </div>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default TimetableView;

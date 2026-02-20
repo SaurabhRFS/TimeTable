@@ -3,12 +3,10 @@ package com.kits.timetable.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Entity
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "subjects")
 public class Subject {
 
@@ -17,26 +15,37 @@ public class Subject {
     private Long id;
 
     @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false, unique = true)
-    private String code;
+    private String name; 
 
     @Column(nullable = false)
-    private String alias;
+    private String code; 
 
     @Column(nullable = false)
-    private String department;
+    private String alias; 
 
     @Column(nullable = false)
-    private int semester;
+    private String department = "CT"; 
 
-    private int weeklyLectureCount;
-    private int weeklyLabCount;
-    private int labDuration;
-    private Boolean isElective = false;
+    @Column(nullable = false)
+    private Integer semester = 6; 
 
-    // --- NEW: THE CUSTOM BATCH SYSTEM ---
-    private Boolean hasBatches = false; // "Does this subject split students into batches?"
-    private int batchesPerSection = 0; // "If yes, how many batches? (e.g., 3 means A1, A2, A3)"
+    // ✨ NEW FIELD: This makes the app SMART. 
+    // It will store "THEORY", "LAB", or "ACTIVITY"
+    @Column(name = "subject_type", nullable = false)
+    private String subjectType = "THEORY"; 
+
+    @Column(nullable = false)
+    private Integer weeklyLectureCount = 0; 
+
+    @Column(nullable = false)
+    private Integer weeklyLabCount = 0; 
+
+    @Column(nullable = false)
+    private Integer labDuration = 0; 
+
+    @Column(nullable = false)
+    private Boolean hasBatches = false; 
+
+    @Column(nullable = false)
+    private Integer batchesPerSection = 0; 
 }

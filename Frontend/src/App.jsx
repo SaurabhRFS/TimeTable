@@ -1,21 +1,21 @@
 import { useState } from "react";
 import Navbar from "./components/Navbar";
 import TeacherDashboard from "./components/TeacherDashboard";
+import SubjectDashboard from "./components/SubjectDashboard";
 import WorkloadDashboard from "./components/WorkloadDashboard";
-import GeneratorDashboard from "./components/GeneratorDashboard";
-import TimetableView from "./components/TimetableView"; // <-- Add this
+import TimetableView from "./components/TimetableView"; // This is now our master screen
 
 function App() {
-  const [activeTab, setActiveTab] = useState("view"); 
+  const [activeTab, setActiveTab] = useState("subjects"); 
 
   return (
-    <div style={{ fontFamily: "Arial, sans-serif" }}>
+    <div className="min-h-screen bg-slate-50 font-sans">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <main style={{ padding: "20px" }}>
+      <main className="p-6">
+        {activeTab === "subjects" && <SubjectDashboard />}
         {activeTab === "teachers" && <TeacherDashboard />}
         {activeTab === "workload" && <WorkloadDashboard />}
-        {activeTab === "generate" && <GeneratorDashboard />}
-        {activeTab === "view" && <TimetableView />} {/* <-- Add this */}
+        {activeTab === "view" && <TimetableView />} {/* The Ultimate Interactive Grid */}
       </main>
     </div>
   );
