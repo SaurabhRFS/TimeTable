@@ -198,7 +198,7 @@ const WorkloadDashboard = () => {
                                                     onChange={(e) => handleAssign(sub.id, sec, batchLabel, e.target.value)}
                                                 >
                                                     <option value="" className="text-slate-400">-- Assign --</option>
-                                                    {teachers.map(t => <option key={t.id} value={t.id}>{t.alias}</option>)}
+                                                    {teachers.map(t => <option key={t.id} value={t.id}>{t.name} ({t.alias})</option>)}
                                                 </select>
                                             </td>
                                         );

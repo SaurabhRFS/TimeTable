@@ -24,7 +24,14 @@ export const deleteEntry = async (id) => {
     });
     if (!response.ok) throw new Error('Failed to delete entry');
     
-    // Spring Boot delete endpoints usually return empty bodies, so we handle that safely:
     const text = await response.text();
     return text ? JSON.parse(text) : {};
+};
+
+export const autoGenerateGrid = async (dept, sem, section) => {
+    const response = await fetch(`${API_URL}/generate?dept=${dept}&sem=${sem}&section=${section}`, {
+        method: 'POST'
+    });
+    if (!response.ok) throw new Error('Failed to auto-generate');
+    return response.json();
 };
