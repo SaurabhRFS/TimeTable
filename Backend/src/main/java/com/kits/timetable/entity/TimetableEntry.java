@@ -29,6 +29,10 @@ public class TimetableEntry {
     @Column(nullable = false)
     private String batch = "ALL";
 
+    // The new flag to protect manual data
+    @Column(name = "is_manual")
+    private Boolean isManual = false;
+
     @ManyToOne
     @JoinColumn(name = "time_slot_id", nullable = false)
     private TimeSlot timeSlot;

@@ -9,12 +9,13 @@ import java.util.List;
 @Repository
 public interface WorkloadRepository extends JpaRepository<Workload, Long> {
     
-    // Used by WorkloadController
     List<Workload> findByDepartmentAndSemester(String department, int semester);
     
-    // Used by WorkloadController
     Workload findBySubjectIdAndSectionAndBatch(Long subjectId, String section, String batch);
     
-    // Required by TimetableGeneratorService for auto-fill
     List<Workload> findByDepartmentAndSemesterAndSection(String department, int semester, String section);
+
+    // Added methods for cascading deletes
+    void deleteByTeacher(com.kits.timetable.entity.Teacher teacher);
+    void deleteBySubject(com.kits.timetable.entity.Subject subject);
 }

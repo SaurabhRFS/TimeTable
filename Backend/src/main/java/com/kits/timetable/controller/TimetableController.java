@@ -20,7 +20,6 @@ public class TimetableController {
     @Autowired private TeacherRepository teacherRepository;
     @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private RoomRepository roomRepository;
-    
     @Autowired private TimetableGeneratorService generatorService;
 
     @GetMapping
@@ -41,6 +40,9 @@ public class TimetableController {
             entry.setSemester(Integer.parseInt(String.valueOf(payload.get("semester"))));
             entry.setSection(String.valueOf(payload.get("section")));
             entry.setBatch(String.valueOf(payload.get("batch")));
+            
+            // Lock this entry down so it never gets wiped by the auto-generator
+            entry.setIsManual(true);
             
             int requestedSlotOrder = Integer.parseInt(String.valueOf(payload.get("timeSlotId")));
             TimeSlot matchedSlot = timeSlotRepository.findAll().stream()
