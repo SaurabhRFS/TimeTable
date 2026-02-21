@@ -79,10 +79,10 @@ const TimetableView = () => {
     };
 
     const handleAutoFill = async () => {
-        if(window.confirm("Ready to auto-fill the remaining Theory subjects?")) {
+        if(window.confirm("Ready to generate the timetable for all sections?")) {
             try {
-                await autoGenerateGrid(DEPT, SEM, section);
-                showMessage("Timetable Auto-Filled Successfully.", "success");
+                await autoGenerateGrid(DEPT, SEM);
+                showMessage("Timetable Generated Successfully.", "success");
                 loadData(); 
             } catch (error) {
                 showMessage("Failed to generate timetable.", "error");
@@ -236,10 +236,23 @@ export default TimetableView;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 // import { useEffect, useState } from "react";
 // import { getSubjectsBySem } from "../services/subjectService";
 // import { getAllTeachers } from "../services/teacherService";
-// import { getTimetable, addManualEntry, deleteEntry } from "../services/timetableService";
+// import { getTimetable, addManualEntry, deleteEntry, autoGenerateGrid } from "../services/timetableService";
 
 // const TimetableView = () => {
 //     const DEPT = "CT";
@@ -299,7 +312,7 @@ export default TimetableView;
 
 //         try {
 //             await addManualEntry(payload);
-//             showMessage("Added to grid!", "success");
+//             showMessage("Added to grid.", "success");
 //             loadData(); 
 //         } catch (error) {
 //             showMessage("Failed to save. Check inputs.", "error");
@@ -307,12 +320,24 @@ export default TimetableView;
 //     };
 
 //     const handleDelete = async (entryId) => {
-//         if (window.confirm("Remove this?")) {
+//         if (window.confirm("Remove this entry?")) {
 //             try {
 //                 await deleteEntry(entryId);
-//                 showMessage("Removed.", "success");
+//                 showMessage("Removed successfully.", "success");
 //                 loadData();
 //             } catch (error) { showMessage("Failed to delete.", "error"); }
+//         }
+//     };
+
+//     const handleAutoFill = async () => {
+//         if(window.confirm("Ready to auto-fill the remaining Theory subjects?")) {
+//             try {
+//                 await autoGenerateGrid(DEPT, SEM, section);
+//                 showMessage("Timetable Auto-Filled Successfully.", "success");
+//                 loadData(); 
+//             } catch (error) {
+//                 showMessage("Failed to generate timetable.", "error");
+//             }
 //         }
 //     };
 
@@ -326,8 +351,12 @@ export default TimetableView;
 //                         <option value="A">Section A</option>
 //                         <option value="B">Section B</option>
 //                     </select>
-//                     <button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded shadow-sm">✨ Auto-Fill Theory</button>
-//                     <button onClick={() => window.print()} className="bg-slate-800 text-white font-bold px-4 py-2 rounded shadow-sm print:hidden">🖨️ Print</button>
+//                     <button onClick={handleAutoFill} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded shadow-sm">
+//                         Auto-Fill Theory
+//                     </button>
+//                     <button onClick={() => window.print()} className="bg-slate-800 text-white font-bold px-4 py-2 rounded shadow-sm print:hidden">
+//                         Print
+//                     </button>
 //                 </div>
 //             </div>
 
@@ -337,9 +366,8 @@ export default TimetableView;
 //                 </div>
 //             )}
 
-//             {/* THE STATIC "PIN ENTRY" DOCK */}
 //             <div className="bg-slate-800 p-4 rounded-xl mb-6 shadow-md print:hidden">
-//                 <h3 className="text-white font-bold mb-3">📌 Pin Manual Block</h3>
+//                 <h3 className="text-white font-bold mb-3">Pin Manual Block</h3>
 //                 <form onSubmit={handleSaveEntry} className="flex flex-wrap gap-3 items-end">
 //                     <div className="flex-1 min-w-[120px]">
 //                         <label className="text-slate-300 text-xs font-bold block mb-1">Day</label>
@@ -376,7 +404,6 @@ export default TimetableView;
 //                 </form>
 //             </div>
 
-//             {/* THE TIMETABLE GRID */}
 //             <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-slate-200">
 //                 <table className="w-full text-center border-collapse">
 //                     <thead className="bg-slate-100 border-b-2 border-slate-300">
@@ -408,7 +435,6 @@ export default TimetableView;
 //                                         return null; 
 //                                     }
 
-//                                     // 🔥 THE FIX IS HERE: Filter by slotOrder instead of ID
 //                                     const entries = schedule.filter(e => e.day === day && e.timeSlot.slotOrder === slot.id);
 
 //                                     return (

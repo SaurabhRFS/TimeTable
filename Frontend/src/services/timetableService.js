@@ -28,8 +28,8 @@ export const deleteEntry = async (id) => {
     return text ? JSON.parse(text) : {};
 };
 
-export const autoGenerateGrid = async (dept, sem, section) => {
-    const response = await fetch(`${API_URL}/generate?dept=${dept}&sem=${sem}&section=${section}`, {
+export const autoGenerateGrid = async (dept, sem) => {
+    const response = await fetch(`${API_URL}/generate?dept=${dept}&sem=${sem}`, {
         method: 'POST'
     });
     if (!response.ok) throw new Error('Failed to auto-generate');

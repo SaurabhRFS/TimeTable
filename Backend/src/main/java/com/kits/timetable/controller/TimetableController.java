@@ -3,6 +3,7 @@ package com.kits.timetable.controller;
 import com.kits.timetable.entity.TimeSlot;
 import com.kits.timetable.entity.TimetableEntry;
 import com.kits.timetable.repository.*;
+import com.kits.timetable.service.TimetableGeneratorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,8 @@ public class TimetableController {
     @Autowired private TeacherRepository teacherRepository;
     @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private RoomRepository roomRepository;
+    
+    @Autowired private TimetableGeneratorService generatorService;
 
     @GetMapping
     public List<TimetableEntry> getTimetable(
@@ -30,7 +33,6 @@ public class TimetableController {
 
     @PostMapping("/manual")
     public ResponseEntity<?> addManualEntry(@RequestBody Map<String, Object> payload) {
-        
         try {
             TimetableEntry entry = new TimetableEntry();
             
@@ -40,8 +42,6 @@ public class TimetableController {
             entry.setSection(String.valueOf(payload.get("section")));
             entry.setBatch(String.valueOf(payload.get("batch")));
             
-            // 🔥 THE FIX: Search by 'slotOrder' instead of 'ID'. 
-            // This makes the app immune to MySQL auto-increment changes!
             int requestedSlotOrder = Integer.parseInt(String.valueOf(payload.get("timeSlotId")));
             TimeSlot matchedSlot = timeSlotRepository.findAll().stream()
                     .filter(slot -> slot.getSlotOrder() == requestedSlotOrder)
@@ -50,7 +50,6 @@ public class TimetableController {
             
             entry.setTimeSlot(matchedSlot);
             
-            // Fetch remaining entities
             Long subjectId = Long.parseLong(String.valueOf(payload.get("subjectId")));
             entry.setSubject(subjectRepository.findById(subjectId).orElseThrow());
             
@@ -62,7 +61,6 @@ public class TimetableController {
             }
 
             timetableRepository.save(entry);
-
             return ResponseEntity.ok().body(Map.of("message", "Success"));
 
         } catch (Exception e) {
@@ -75,5 +73,18 @@ public class TimetableController {
     public ResponseEntity<?> deleteEntry(@PathVariable Long id) {
         timetableRepository.deleteById(id);
         return ResponseEntity.ok().body(Map.of("message", "Deleted"));
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity<?> autoGenerateTimetable(
+            @RequestParam String dept, 
+            @RequestParam int sem) {
+        try {
+            generatorService.generateTheoryTimetable(dept, sem);
+            return ResponseEntity.ok().body(Map.of("message", "Timetable Generated Successfully"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 }
