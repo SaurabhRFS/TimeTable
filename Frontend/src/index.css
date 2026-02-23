@@ -2,9 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Professional Minimalist Theme */
+/* Professional Minimalist Theme with Transparent Base */
 body {
-  background-color: #f8f9fa; /* Very light gray, almost white */
-  color: #1f2937; /* Dark gray text (easier on eyes than pure black) */
+  background-color: transparent; /* Let AnimatedBackground handle the color */
+  color: #1f2937; 
   min-height: 100vh;
+  margin: 0;
 }
