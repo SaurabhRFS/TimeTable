@@ -1,30 +1,35 @@
 import { useEffect, useState } from "react";
 import { getSubjectsBySem, addSubject, updateSubject, deleteSubject } from "../services/subjectService";
 
-const SubjectDashboard = () => {
+// CRITICAL: Catching activeDept here
+const SubjectDashboard = ({ activeDept }) => { 
     const [subjects, setSubjects] = useState([]);
-    const [filterDept, setFilterDept] = useState("CT");
     const [filterSem, setFilterSem] = useState(6);
     const [statusMsg, setStatusMsg] = useState({ text: "", type: "" });
     const [editingId, setEditingId] = useState(null);
 
     const [formData, setFormData] = useState({
-        name: "", code: "", alias: "", department: "CT", semester: 6,
+        name: "", code: "", alias: "", 
+        department: activeDept, // Auto-sets to the selected branch
+        semester: 6,
         subjectType: "THEORY",
         weeklyLectureCount: 0, 
         weeklyLabCount: 0, 
-        labDuration: 0, // Handled automatically in the background now
+        labDuration: 0, 
         hasBatches: false, 
         batchesPerSection: 0
     });
 
+    // Reloads whenever you switch the branch in the Navbar!
     useEffect(() => {
         loadSubjects();
-    }, [filterDept, filterSem]);
+        setFormData(prev => ({ ...prev, department: activeDept }));
+    }, [activeDept, filterSem]);
 
     const loadSubjects = async () => {
         try {
-            const data = await getSubjectsBySem(filterDept, filterSem);
+            // Fetches strictly for the active branch
+            const data = await getSubjectsBySem(activeDept, filterSem); 
             setSubjects(data);
         } catch (error) {
             showMessage("Failed to load subjects.", "error");
@@ -46,16 +51,14 @@ const SubjectDashboard = () => {
             parsedValue = value === "" ? 0 : parseInt(value, 10);
         }
 
-        // SMART FORM LOGIC: When the user changes the Subject Type, 
-        // we automatically reset and configure the related fields in the background!
         if (name === "subjectType") {
             setFormData({
                 ...formData,
                 subjectType: parsedValue,
                 weeklyLectureCount: 0,
                 weeklyLabCount: 0,
-                labDuration: parsedValue === 'LAB' ? 2 : 0, // Labs automatically get 2 slots (2 hours)
-                hasBatches: parsedValue === 'LAB', // Auto-check batches for Labs
+                labDuration: parsedValue === 'LAB' ? 2 : 0, 
+                hasBatches: parsedValue === 'LAB', 
                 batchesPerSection: parsedValue === 'LAB' ? 2 : 0
             });
         } else {
@@ -66,11 +69,12 @@ const SubjectDashboard = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const submissionData = { ...formData, department: activeDept }; 
             if (editingId) {
-                await updateSubject(editingId, formData);
+                await updateSubject(editingId, submissionData);
                 showMessage("Subject updated successfully!", "success");
             } else {
-                await addSubject(formData);
+                await addSubject(submissionData);
                 showMessage("Subject added successfully!", "success");
             }
             resetForm();
@@ -100,7 +104,9 @@ const SubjectDashboard = () => {
 
     const resetForm = () => {
         setFormData({
-            name: "", code: "", alias: "", department: filterDept, semester: filterSem,
+            name: "", code: "", alias: "", 
+            department: activeDept, 
+            semester: filterSem,
             subjectType: "THEORY",
             weeklyLectureCount: 0, weeklyLabCount: 0, labDuration: 0, hasBatches: false, batchesPerSection: 0
         });
@@ -117,7 +123,7 @@ const SubjectDashboard = () => {
     };
 
     return (
-        <div className="p-6 max-w-6xl mx-auto font-sans">
+        <div className="p-6 max-w-6xl mx-auto font-sans animate-fade-in-up">
             <div className="flex justify-between items-center mb-6 border-b-2 border-slate-800 pb-3">
                 <h2 className="text-2xl font-bold text-slate-800">Manage Subjects</h2>
             </div>
@@ -128,27 +134,34 @@ const SubjectDashboard = () => {
                 </div>
             )}
 
-            {/* Filter Section */}
             <div className="flex gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm">
                 <div className="flex items-center">
-                    <label className="font-semibold text-slate-700 mr-2">Department:</label>
-                    <input className="border border-slate-300 p-1.5 rounded focus:ring-2 focus:ring-emerald-500 outline-none w-24 text-center font-bold text-slate-700" value={filterDept} onChange={(e) => setFilterDept(e.target.value.toUpperCase())} />
+                    <span className="font-semibold text-slate-500 mr-2">Department:</span>
+                    <span className="bg-white border border-slate-300 px-3 py-1.5 rounded font-black text-slate-800 shadow-sm">
+                        {activeDept}
+                    </span>
                 </div>
-                <div className="flex items-center">
-                    <label className="font-semibold text-slate-700 mr-2">Semester:</label>
-                    <input type="number" className="border border-slate-300 p-1.5 rounded focus:ring-2 focus:ring-emerald-500 outline-none w-16 text-center font-bold text-slate-700" value={filterSem} onChange={(e) => setFilterSem(e.target.value)} />
+                <div className="flex items-center ml-4">
+                    <label className="font-semibold text-slate-700 mr-2">View Semester:</label>
+                    <select 
+                        className="border border-slate-300 p-1.5 rounded focus:ring-2 focus:ring-emerald-500 outline-none w-28 text-center font-bold text-slate-700 bg-white cursor-pointer" 
+                        value={filterSem} 
+                        onChange={(e) => setFilterSem(parseInt(e.target.value))}
+                    >
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                            <option key={num} value={num}>Sem {num}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
-            {/* Form Section */}
-            <div className="bg-white shadow-md rounded-lg p-6 mb-8 border border-slate-200">
+            <div className="bg-white/80 backdrop-blur-sm shadow-md rounded-lg p-6 mb-8 border border-slate-200">
                 <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                    {editingId ? "✏️ Edit Subject" : "➕ Add New Subject"}
+                    {editingId ? "✏️ Edit Subject" : `➕ Add New Subject to ${activeDept}`}
                 </h3>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Basic Info Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <div className="md:col-span-1">
                             <label className="block text-sm font-bold text-slate-600 mb-1">Type</label>
                             <select className="w-full border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-700" name="subjectType" value={formData.subjectType} onChange={handleInputChange}>
@@ -157,13 +170,23 @@ const SubjectDashboard = () => {
                                 <option value="ACTIVITY">Activity</option>
                             </select>
                         </div>
+                        
+                        <div className="md:col-span-1">
+                            <label className="block text-sm font-bold text-slate-600 mb-1">Target Semester</label>
+                            <select className="w-full border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-700" name="semester" value={formData.semester} onChange={handleInputChange}>
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                                    <option key={num} value={num}>Semester {num}</option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="md:col-span-1">
                             <label className="block text-sm font-bold text-slate-600 mb-1">Alias (e.g. DWM)</label>
-                            <input className="w-full border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500" name="alias" value={formData.alias} onChange={handleInputChange} required />
+                            <input className="w-full border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase font-bold" name="alias" value={formData.alias} onChange={handleInputChange} required />
                         </div>
                         <div className="md:col-span-1">
                             <label className="block text-sm font-bold text-slate-600 mb-1">Code (e.g. CT601)</label>
-                            <input className="w-full border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500" name="code" value={formData.code} onChange={handleInputChange} required />
+                            <input className="w-full border border-slate-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase font-bold" name="code" value={formData.code} onChange={handleInputChange} required />
                         </div>
                         <div className="md:col-span-1">
                             <label className="block text-sm font-bold text-slate-600 mb-1">Full Name</label>
@@ -171,19 +194,18 @@ const SubjectDashboard = () => {
                         </div>
                     </div>
 
-                    {/* DYNAMIC ROW: Changes based on Subject Type */}
-                    <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100">
+                    <div className="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
                         {formData.subjectType === 'THEORY' && (
                             <div>
                                 <label className="block text-sm font-extrabold text-emerald-900 mb-1">Lectures per Week</label>
-                                <input type="number" min="0" className="w-full md:w-1/4 border border-emerald-300 p-2.5 rounded font-bold text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500" name="weeklyLectureCount" value={formData.weeklyLectureCount} onChange={handleInputChange} required />
+                                <input type="number" min="0" className="w-full md:w-1/4 border border-emerald-300 p-2.5 rounded font-bold text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white" name="weeklyLectureCount" value={formData.weeklyLectureCount} onChange={handleInputChange} required />
                             </div>
                         )}
 
                         {formData.subjectType === 'ACTIVITY' && (
                             <div>
                                 <label className="block text-sm font-extrabold text-emerald-900 mb-1">Slots per Week</label>
-                                <input type="number" min="0" className="w-full md:w-1/4 border border-emerald-300 p-2.5 rounded font-bold text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500" name="weeklyLectureCount" value={formData.weeklyLectureCount} onChange={handleInputChange} required />
+                                <input type="number" min="0" className="w-full md:w-1/4 border border-emerald-300 p-2.5 rounded font-bold text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white" name="weeklyLectureCount" value={formData.weeklyLectureCount} onChange={handleInputChange} required />
                             </div>
                         )}
 
@@ -191,7 +213,7 @@ const SubjectDashboard = () => {
                             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
                                 <div>
                                     <label className="block text-sm font-extrabold text-emerald-900 mb-1">Labs per Week</label>
-                                    <input type="number" min="0" className="w-full border border-emerald-300 p-2.5 rounded font-bold text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500" name="weeklyLabCount" value={formData.weeklyLabCount} onChange={handleInputChange} required />
+                                    <input type="number" min="0" className="w-full border border-emerald-300 p-2.5 rounded font-bold text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white" name="weeklyLabCount" value={formData.weeklyLabCount} onChange={handleInputChange} required />
                                 </div>
                                 
                                 <div className="flex items-center gap-2 mt-4 md:mt-0">
@@ -201,7 +223,7 @@ const SubjectDashboard = () => {
                                     {formData.hasBatches && (
                                         <div className="ml-2 flex items-center gap-2">
                                             <label className="text-sm font-semibold text-slate-600">Count:</label>
-                                            <input type="number" min="1" className="border border-slate-300 p-1.5 rounded w-16 text-center font-bold" name="batchesPerSection" value={formData.batchesPerSection} onChange={handleInputChange} />
+                                            <input type="number" min="1" className="border border-slate-300 p-1.5 rounded w-16 text-center font-bold bg-white" name="batchesPerSection" value={formData.batchesPerSection} onChange={handleInputChange} />
                                         </div>
                                     )}
                                 </div>
@@ -220,7 +242,6 @@ const SubjectDashboard = () => {
                 </form>
             </div>
 
-            {/* Table Section */}
             <div className="bg-white shadow-md rounded-lg overflow-hidden border border-slate-200">
                 <table className="w-full text-left border-collapse min-w-max">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm uppercase tracking-wider">
@@ -289,7 +310,7 @@ const SubjectDashboard = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
-                        <p>No subjects found for {filterDept} Sem {filterSem}. Add your first subject above.</p>
+                        <p>No subjects found for {activeDept} Sem {filterSem}. Add your first subject above.</p>
                     </div>
                 )}
             </div>
